@@ -12,10 +12,54 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-    // Override point for customization after application launch.
+    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"FirstRun"];
+    
+    [self registerDefaultsOfInitialDate];
+    
+    NSString *userId = [[NSUserDefaults standardUserDefaults] stringForKey:@"userId"];
+    
+    if(!userId) {
+        [self registerDefaultsFromSettingsBundle];
+        userId = [[NSUserDefaults standardUserDefaults] stringForKey:@"email"];
+    }
+    
     return YES;
 }
-							
+
+- (void)registerDefaultsOfInitialDate
+{
+    //stores an NSDate on first launch
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSDictionary *appDefaults = [NSDictionary dictionaryWithObject:[NSDate date]
+                                                            forKey:@"Initial Run"];
+    [defaults registerDefaults:appDefaults];
+    NSLog(@"NSUserDefaults: %@", [[NSUserDefaults standardUserDefaults]dictionaryRepresentation]);
+}
+
+
+- (void)registerDefaultsFromSettingsBundle {
+    NSString *settingsBundle = [[NSBundle mainBundle] pathForResource:@"Settings" ofType:@"bundle"];
+    if(!settingsBundle) {
+        NSLog(@"Could not find Settings.bundle");
+        return;
+    }
+    
+    NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:[settingsBundle stringByAppendingPathComponent:@"Root.plist"]];
+    NSArray *preferences = [settings objectForKey:@"PreferenceSpecifiers"];
+    
+    NSMutableDictionary *defaultsToRegister = [[NSMutableDictionary alloc] initWithCapacity:[preferences count]];
+    for(NSDictionary *prefSpecification in preferences) {
+        NSString *key = [prefSpecification objectForKey:@"Key"];
+        if(key && [[prefSpecification allKeys] containsObject:@"DefaultValue"]) {
+            [defaultsToRegister setObject:[prefSpecification objectForKey:@"DefaultValue"] forKey:key];
+        }
+    }
+    
+    [[NSUserDefaults standardUserDefaults] registerDefaults:defaultsToRegister];
+    
+    
+}
+
 - (void)applicationWillResignActive:(UIApplication *)application
 {
     // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
